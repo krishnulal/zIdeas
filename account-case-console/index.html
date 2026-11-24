@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Account & Case Console</title>
+<style>
+:root{--navy:#153D84;--blue:#2d66c3;--green:#43C756;--ink:#17243a;--muted:#66758b;--line:#e5eaf1;--bg:#f4f7fb;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:linear-gradient(115deg,#153D84,#2458a6);color:white;padding:22px clamp(16px,4vw,42px);display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}header p{margin:4px 0 0;color:#dbe7ff;font-size:12px}.head-right{display:flex;gap:10px;align-items:center}.status{font-size:12px;border:1px solid #ffffff55;border-radius:20px;padding:7px 11px}
+main{max-width:1440px;margin:auto;padding:22px clamp(14px,3vw,30px) 38px}
+.config,.card,.metric{background:white;border:1px solid var(--line);border-radius:13px}.config{padding:14px;display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+.field{min-width:0}.config .field{flex:1;min-width:220px}label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--muted);margin-bottom:6px}
+input,select,textarea{width:100%;border:1px solid #d8e0eb;border-radius:8px;padding:10px 11px;font:inherit;color:var(--ink);background:#fff;outline:none}input:focus,select:focus,textarea:focus{border-color:#5c8ed8;box-shadow:0 0 0 3px #2d66c31a}textarea{min-height:76px;resize:vertical}
+button{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--navy);color:white}.secondary{background:#eef3fb;color:var(--navy);border:1px solid #dce6f5}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}.small{padding:6px 9px;font-size:12px}
+.notice{display:none;padding:11px 13px;border-radius:9px;margin:0 0 15px;white-space:pre-wrap}.notice.show{display:block}.ok{background:#eaf8ed;color:#236c32}.err{background:#fff0ef;color:#9f261e}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px}.metric{padding:16px}.metric span{color:var(--muted);font-size:12px}.metric strong{display:block;color:var(--navy);font-size:27px;margin-top:3px}
+.tabs{display:flex;gap:5px;border-bottom:1px solid var(--line);margin-bottom:17px}.tab{background:transparent;color:var(--muted);border-bottom:3px solid transparent;border-radius:8px 8px 0 0}.tab.active{color:var(--navy);border-bottom-color:var(--green);background:white}
+.panel{display:none}.panel.active{display:block}.layout{display:grid;grid-template-columns:minmax(270px,335px) minmax(0,1fr);gap:16px;align-items:start}.card{overflow:hidden}.card-head{padding:15px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.card-head h2{font-size:15px;margin:0}.card-body{padding:17px}.form-grid{display:grid;gap:12px}.form-actions,.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tools input{width:min(280px,100%)}.table-wrap{overflow:auto;max-height:630px}table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{text-align:left;padding:11px 13px;border-bottom:1px solid #edf0f5}th{position:sticky;top:0;background:#f8fafd;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em}tbody tr:hover{background:#f8fbff}.empty{text-align:center;padding:28px;color:var(--muted)}.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#edf3fc;color:var(--navy);font-size:11px;font-weight:700}.pill.open{background:#eaf8ed;color:#26743b}.pill.closed{background:#eef0f4;color:#68758a}.hint{font-size:11px;color:var(--muted);margin:0}.actions{display:flex;gap:5px}.footer{text-align:center;font-size:11px;color:var(--muted);margin-top:18px}
+@media(max-width:950px){.layout{grid-template-columns:1fr}.table-wrap{max-height:none}}@media(max-width:600px){.metrics{grid-template-columns:1fr}.head-right{width:100%;justify-content:space-between}}
+</style></head>
+<body>
+<header><div><h1>Account & Case Console</h1><p>Customer account and service case management</p></div><div class="head-right"><span class="status" id="connection">Not connected</span><button class="secondary" id="refresh">Refresh data</button></div></header>
+<main>
+<section class="config"><div class="field"><label>Supabase project URL</label><input id="project" value="https://uegnxuaystagioadgwzv.supabase.co"></div><div class="field"><label>Publishable / anon key</label><input id="key" type="password" placeholder="Paste your Supabase publishable key"></div><button class="primary" id="connect">Connect</button></section>
+<div id="notice" class="notice"></div>
+<section class="metrics"><div class="metric"><span>Accounts</span><strong id="accountTotal">—</strong></div><div class="metric"><span>Cases</span><strong id="caseTotal">—</strong></div><div class="metric"><span>Open / In Progress</span><strong id="activeTotal">—</strong></div></section>
+<nav class="tabs"><button class="tab active" data-panel="accounts">Accounts</button><button class="tab" data-panel="cases">Cases</button></nav>
+<section class="panel active" id="accounts">
+<div class="layout">
+<div class="card"><div class="card-head"><h2 id="accountHeading">Add account</h2><button class="ghost small" id="clearAccount">Clear</button></div><div class="card-body">
+<form class="form-grid" id="accountForm">
+<div><label>Account number</label><input id="accountNumber" type="number" min="1" required></div>
+<div><label>Customer name</label><input id="accountName" required></div>
+<div><label>Phone</label><input id="accountPhone" type="tel"></div>
+<div><label>Email</label><input id="accountEmail" type="email"></div>
+<div class="form-actions"><button class="primary" id="accountSave">Add account</button><button class="secondary" type="button" id="accountCancel" hidden>Cancel edit</button></div>
+<p class="hint">Reads and writes to public."Accounts" through Supabase REST API.</p>
+</form></div></div>
+<div class="card"><div class="card-head"><h2>Accounts</h2><div class="tools"><input id="accountSearch" placeholder="Search accounts"><button class="secondary small" id="reloadAccounts">Reload</button></div></div><div class="table-wrap"><table><thead><tr><th>Account #</th><th>Name</th><th>Phone</th><th>Email</th><th>Action</th></tr></thead><tbody id="accountRows"><tr><td class="empty" colspan="5">Connect to load accounts.</td></tr></tbody></table></div></div>
+</div></section>
+<section class="panel" id="cases">
+<div class="layout">
+<div class="card"><div class="card-head"><h2 id="caseHeading">Create case / add interaction</h2><button class="ghost small" id="clearCase">Clear</button></div><div class="card-body">
+<form class="form-grid" id="caseForm">
+<div><label>Case ID (for update)</label><input id="caseId" type="number" min="1" placeholder="Leave blank to create / reuse"></div>
+<div><label>Account number</label><input id="caseAccount" type="number" min="1" required></div>
+<div><label>Transaction ID</label><input id="transactionId" type="number" min="1"></div>
+<div><label>Subject</label><input id="subject" required placeholder="e.g. Transaction Failed"></div>
+<div><label>Description</label><textarea id="description" placeholder="Describe the customer issue"></textarea></div>
+<div><label>Status</label><select id="caseStatus"><option>Open</option><option>In Progress</option><option>Pending</option><option>Closed</option></select></div>
+<div><label>Priority</label><select id="priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></div>
+<div><label>Genesys interaction ID(s)</label><textarea id="interactions" placeholder="Separate IDs with commas or new lines"></textarea><p class="hint">For a matching active transaction issue, the API adds these IDs to the existing case.</p></div>
+<div class="form-actions"><button class="primary" id="caseSave">Create / add interaction</button><button class="secondary" type="button" id="caseCancel" hidden>Cancel update</button></div>
+</form></div></div>
+<div class="card"><div class="card-head"><h2>Cases</h2><div class="tools"><input id="caseSearch" placeholder="Search cases"><button class="secondary small" id="reloadCases">Reload</button></div></div><div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Account</th><th>Subject</th><th>Transaction</th><th>Status</th><th>Priority</th><th>Interactions</th><th>Action</th></tr></thead><tbody id="caseRows"><tr><td class="empty" colspan="8">Connect to load cases.</td></tr></tbody></table></div></div>
+</div></section>
+<p class="footer">Demo admin console · Do not use unrestricted anonymous access with real customer data.</p>
+</main>
+<script>
+const CASE_API="https://uegnxuaystagioadgwzv.supabase.co/functions/v1/dynamic-function";
+let accounts=[],cases=[],connected=false,accountEdit=null,caseEdit=null;
+const el=id=>document.getElementById(id);
+function note(msg,type){el("notice").textContent=msg;el("notice").className="notice show "+(type||"ok");window.scrollTo({top:0,behavior:"smooth"});}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function base(){const u=el("project").value.trim().replace(/\/$/,""),k=el("key").value.trim();if(!u||!k)throw Error("Enter your Supabase URL and publishable key.");return {u,k};}
+function headers(){return {"apikey":base().k,"Content-Type":"application/json"};}
+async function rest(path,method="GET",body=null){const b=base(),o={method,headers:{apikey:b.k,"Content-Type":"application/json","Prefer":"return=representation"}};if(body!==null)o.body=JSON.stringify(body);const r=await fetch(b.u+"/rest/v1/"+path,o),t=await r.text();let d;try{d=t?JSON.parse(t):null}catch{d={message:t}}if(!r.ok)throw Error(d.message||d.details||d.hint||("Supabase REST error "+r.status));return d;}
+async function caseApi(payload){const r=await fetch(CASE_API,{method:"POST",headers:headers(),body:JSON.stringify(payload)});const d=await r.json().catch(()=>({message:"API did not return JSON"}));if(!r.ok||d.error)throw Error(d.error||d.message||("Case API error "+r.status));return d;}
+async function loadAccounts(){accounts=await rest('Accounts?select=account_number,created_at,Name,Phone,Email&order=account_number.asc');drawAccounts();}
+async function loadCases(){const d=await caseApi({action:"get_all"});cases=Array.isArray(d)?d:(Array.isArray(d.cases)?d.cases:[]);drawCases();}
+function metrics(){el("accountTotal").textContent=accounts.length;el("caseTotal").textContent=cases.length;el("activeTotal").textContent=cases.filter(c=>["open","in progress"].includes(String(c.case_status||"").toLowerCase())).length;}
+function drawAccounts(){const q=el("accountSearch").value.toLowerCase();const list=accounts.filter(a=>[a.account_number,a.Name,a.Phone,a.Email].some(v=>String(v||"").toLowerCase().includes(q)));el("accountRows").innerHTML=list.length?list.map(a=>'<tr><td>'+esc(a.account_number)+'</td><td>'+esc(a.Name)+'</td><td>'+esc(a.Phone)+'</td><td>'+esc(a.Email)+'</td><td><button class="secondary small" data-account="'+esc(a.account_number)+'">Edit</button></td></tr>').join(""):'<tr><td class="empty" colspan="5">No accounts found.</td></tr>';metrics();}
+function drawCases(){const q=el("caseSearch").value.toLowerCase();const list=cases.filter(c=>[c.case_id,c.account_number,c.case_subject,c.case_status,c.case_priority,c.transaction_id,(c.interaction_ids||[]).join(" ")].some(v=>String(v||"").toLowerCase().includes(q)));el("caseRows").innerHTML=list.length?list.map(c=>{const s=String(c.case_status||"").toLowerCase(),cls=s==="closed"?"closed":(["open","in progress"].includes(s)?"open":"");return '<tr><td>'+esc(c.case_id)+'</td><td>'+esc(c.account_number)+'</td><td>'+esc(c.case_subject)+'</td><td>'+esc(c.transaction_id??"—")+'</td><td><span class="pill '+cls+'">'+esc(c.case_status)+'</span></td><td>'+esc(c.case_priority)+'</td><td>'+esc((c.interaction_ids||[]).length)+'</td><td><button class="secondary small" data-case="'+esc(c.case_id)+'">Edit</button></td></tr>';}).join(""):'<tr><td class="empty" colspan="8">No cases found.</td></tr>';metrics();}
+async function refresh(){try{el("connection").textContent="Loading…";await Promise.all([loadAccounts(),loadCases()]);connected=true;el("connection").textContent="Connected";note("Data refreshed.");}catch(e){el("connection").textContent="Error";note(e.message,"err");}}
+function tab(name){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.panel===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===name));}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.panel));
+el("connect").onclick=refresh;el("refresh").onclick=refresh;
+el("reloadAccounts").onclick=()=>loadAccounts().then(()=>note("Accounts refreshed.")).catch(e=>note(e.message,"err"));
+el("reloadCases").onclick=()=>loadCases().then(()=>note("Cases refreshed.")).catch(e=>note(e.message,"err"));
+el("accountSearch").oninput=drawAccounts;el("caseSearch").oninput=drawCases;
+function resetAccount(){el("accountForm").reset();accountEdit=null;el("accountHeading").textContent="Add account";el("accountSave").textContent="Add account";el("accountCancel").hidden=true;el("accountNumber").disabled=false;}
+function resetCase(){el("caseForm").reset();caseEdit=null;el("caseHeading").textContent="Create case / add interaction";el("caseSave").textContent="Create / add interaction";el("caseCancel").hidden=true;el("caseId").disabled=false;}
+el("clearAccount").onclick=resetAccount;el("accountCancel").onclick=resetAccount;el("clearCase").onclick=resetCase;el("caseCancel").onclick=resetCase;
+el("accountRows").onclick=e=>{const b=e.target.closest("[data-account]");if(!b)return;const a=accounts.find(x=>String(x.account_number)===b.dataset.account);if(!a)return;accountEdit=a.account_number;el("accountNumber").value=a.account_number;el("accountNumber").disabled=true;el("accountName").value=a.Name||"";el("accountPhone").value=a.Phone||"";el("accountEmail").value=a.Email||"";el("accountHeading").textContent="Update account";el("accountSave").textContent="Save changes";el("accountCancel").hidden=false;tab("accounts");};
+el("caseRows").onclick=e=>{const b=e.target.closest("[data-case]");if(!b)return;const c=cases.find(x=>String(x.case_id)===b.dataset.case);if(!c)return;caseEdit=c.case_id;el("caseId").value=c.case_id;el("caseId").disabled=true;el("caseAccount").value=c.account_number||"";el("transactionId").value=c.transaction_id||"";el("subject").value=c.case_subject||"";el("description").value=c.case_description||"";el("caseStatus").value=c.case_status||"Open";el("priority").value=c.case_priority||"Medium";el("interactions").value="";el("caseHeading").textContent="Update case";el("caseSave").textContent="Update case";el("caseCancel").hidden=false;tab("cases");};
+el("accountForm").onsubmit=async e=>{e.preventDefault();try{const row={account_number:Number(el("accountNumber").value),Name:el("accountName").value.trim(),Phone:el("accountPhone").value.trim()||null,Email:el("accountEmail").value.trim()||null};if(accountEdit!==null){await rest('Accounts?account_number=eq.'+encodeURIComponent(accountEdit),"PATCH",{Name:row.Name,Phone:row.Phone,Email:row.Email});note("Account updated.");}else{await rest("Accounts","POST",row);note("Account added.");}resetAccount();await loadAccounts();}catch(e){note(e.message,"err");}};
+el("caseForm").onsubmit=async e=>{e.preventDefault();try{const ids=el("interactions").value.split(/[,\n\r]+/).map(x=>x.trim()).filter(Boolean);const payload={action:caseEdit!==null?"update":"add",case_subject:el("subject").value.trim(),case_description:el("description").value.trim()||null,account_number:Number(el("caseAccount").value),transaction_id:el("transactionId").value?Number(el("transactionId").value):null,case_status:el("caseStatus").value,case_priority:el("priority").value,interaction_ids:ids};if(caseEdit!==null)payload.case_id=Number(caseEdit);const result=await caseApi(payload);note(result.action_taken==="interaction_added_to_existing_case"?"Interaction added to existing case.":result.action_taken==="new_case_created"?"New case created.":caseEdit!==null?"Case updated.":"Case request completed.");resetCase();await loadCases();}catch(e){note(e.message,"err");}};
+</script></body></html>
