@@ -54,6 +54,20 @@ button{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:700
 </form></div></div>
 <div class="card"><div class="card-head"><h2>Cases</h2><div class="tools"><input id="caseSearch" placeholder="Search cases"><button class="secondary small" id="reloadCases">Reload</button></div></div><div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Account</th><th>Subject</th><th>Transaction</th><th>Status</th><th>Priority</th><th>Interactions</th><th>Action</th></tr></thead><tbody id="caseRows"><tr><td class="empty" colspan="8">Loading cases…</td></tr></tbody></table></div></div>
 </div></section>
+<section class="panel" id="transactions"><div class="layout">
+<div class="card"><div class="card-head"><h2 id="transactionHeading">Add transaction</h2><button class="ghost small" id="clearTransaction">Clear</button></div><div class="card-body"><form class="form-grid" id="transactionForm">
+<div><label>Transaction ID</label><input id="transactionIdEdit" type="number" min="1" placeholder="Auto-generated"></div>
+<div><label>Account number</label><input id="transactionAccount" type="number" min="1" required></div>
+<div><label>Amount</label><input id="transactionAmount" type="number" step="0.01" required></div>
+<div><label>Date / time</label><input id="transactionDate" type="datetime-local" required></div>
+<div><label>Transaction type</label><input id="transactionType" required placeholder="e.g. Transfer"></div>
+<div><label>Status</label><select id="transactionStatus"><option>Successful</option><option>Pending</option><option>Failed</option></select></div>
+<div><label>Failure reason</label><textarea id="transactionFailure"></textarea></div>
+<div class="form-actions"><button class="primary" id="transactionSave">Add transaction</button><button class="secondary" type="button" id="transactionCancel" hidden>Cancel edit</button></div>
+</form></div></div>
+<div class="card"><div class="card-head"><h2>Transactions</h2><div class="tools"><input id="transactionSearch" placeholder="Search transactions"><button class="secondary small" id="reloadTransactions">Reload</button></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Account</th><th>Amount</th><th>Date</th><th>Type</th><th>Status</th><th>Failure reason</th><th>Actions</th></tr></thead><tbody id="transactionRows"><tr><td class="empty" colspan="8">Loading transactions…</td></tr></tbody></table></div></div>
+</div></section>
+
 <p class="footer">Demo admin console · Do not use unrestricted anonymous access with real customer data.</p>
 </main>
 <script>
