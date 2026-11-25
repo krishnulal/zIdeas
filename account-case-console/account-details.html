@@ -16,7 +16,7 @@ a,button{cursor:pointer}a.button,button{display:inline-block;border:0;border-rad
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.metric{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px}.metric span{color:var(--muted);font-size:12px}.metric strong{display:block;font-size:25px;color:var(--navy)}
 .card{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:16px}.card-head{padding:15px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.card-head h2{font-size:15px;margin:0}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:11px 13px;border-bottom:1px solid #edf0f5;white-space:nowrap}th{background:#f8fafd;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em}td.wrap{white-space:normal;min-width:160px;max-width:320px;overflow-wrap:anywhere}.empty{text-align:center;padding:26px;color:var(--muted)}.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#edf3fc;color:var(--navy);font-size:11px;font-weight:700}.pill.open{background:#eaf8ed;color:#26743b}.pill.closed{background:#eef0f4;color:#68758a}.footer{text-align:center;color:var(--muted);font-size:11px;margin-top:20px}
 @media(max-width:850px){.details{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metrics{grid-template-columns:1fr}.details{grid-template-columns:1fr}}
-</style>
+.edit-form{display:none;padding:16px;background:#fff;border:1px solid var(--line);border-radius:12px;margin:0 0 16px}.edit-form.show{display:block}.edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.edit-grid .full{grid-column:1/-1}.edit-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}@media(max-width:600px){.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}}</style>
 </head>
 <body>
 <header><h1>Account Details</h1><p>Account overview, related cases and transactions</p></header>
@@ -37,9 +37,10 @@ a,button{cursor:pointer}a.button,button{display:inline-block;border:0;border-rad
 <div class="metric"><span>Open / In Progress</span><strong id="openCaseCount">—</strong></div>
 <div class="metric"><span>Total Transactions</span><strong id="transactionCount">—</strong></div>
 </section>
+<section class="edit-form" id="caseEditPanel"><h2 id="editTitle">Edit Case</h2><form id="caseEditForm"><div class="edit-grid"><div><label>Ticket ID</label><input id="editTicket" readonly></div><div><label>Case Status</label><select id="editStatus"><option>Open</option><option>In Progress</option><option>Pending</option><option>Closed</option></select></div><div><label>Subject</label><input id="editSubject" required></div><div><label>Transaction ID</label><input id="editTransaction" type="number" min="1"></div><div class="full"><label>Description</label><textarea id="editDescription"></textarea></div><div><label>Priority</label><select id="editPriority"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></div><div class="full"><label>Add interaction ID(s)</label><textarea id="editInteractions" placeholder="Optional; separate IDs with commas or new lines"></textarea></div></div><div class="edit-actions"><button class="primary" id="saveCase" type="submit">Save case</button><button class="secondary" id="cancelCaseEdit" type="button">Cancel</button></div></form></section>
 <section class="card">
 <div class="card-head"><h2>Cases for this account</h2><span id="caseHint"></span></div>
-<div class="table-wrap"><table><thead><tr><th>Ticket ID</th><th>Subject</th><th>Description</th><th>Transaction ID</th><th>Status</th><th>Created</th></tr></thead><tbody id="caseRows"><tr><td class="empty" colspan="6">Loading cases…</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Ticket ID</th><th>Subject</th><th>Description</th><th>Transaction ID</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="caseRows"><tr><td class="empty" colspan="7">Loading cases…</td></tr></tbody></table></div>
 </section>
 <section class="card">
 <div class="card-head"><h2>Transactions for this account</h2><span id="transactionHint"></span></div>
@@ -51,6 +52,7 @@ a,button{cursor:pointer}a.button,button{display:inline-block;border:0;border-rad
 const CASE_API="https://uegnxuaystagioadgwzv.supabase.co/functions/v1/dynamic-function";
 const ACCOUNT_API="https://uegnxuaystagioadgwzv.supabase.co/functions/v1/swift-service";
 const accountNumber=new URLSearchParams(location.search).get("account_number");
+let accountCases=[];let editingCase=null;
 const $=id=>document.getElementById(id);
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function showError(m){$("notice").textContent=m;$("notice").className="notice show err";}
@@ -71,15 +73,18 @@ async function load(){
   const account=allAccounts.find(a=>String(a.account_number)===String(accountNumber));
   if(!account){$("customerName").textContent="Account not found";$("customerPhone").textContent="—";$("customerEmail").textContent="—";}
   else{$("customerName").textContent=account.Name||"—";$("customerPhone").textContent=account.Phone||"—";$("customerEmail").textContent=account.Email||"—";}
-  const cases=arrayOf(caseData,"cases").filter(c=>String(c.account_number)===String(accountNumber));
+  const cases=arrayOf(caseData,"cases").filter(c=>String(c.account_number)===String(accountNumber));accountCases=cases;
   const allTransactions=arrayOf(transactionData,"transactions");
   const transactions=allTransactions.filter(t=>String(t.account_number)===String(accountNumber)).sort((a,b)=>new Date(b.transaction_datetime||0)-new Date(a.transaction_datetime||0));
   $("caseCount").textContent=cases.length;$("openCaseCount").textContent=cases.filter(c=>["open","in progress"].includes(String(c.case_status||"").toLowerCase())).length;$("transactionCount").textContent=transactions.length;
   $("caseHint").textContent=cases.length+" record(s)";$("transactionHint").textContent=transactions.length+" record(s)";
-  $("caseRows").innerHTML=cases.length?cases.map(c=>'<tr><td>'+esc(c.ticket_id||c.case_id||"—")+'</td><td class="wrap">'+esc(c.case_subject||"—")+'</td><td class="wrap">'+esc(c.case_description||"—")+'</td><td>'+esc(c.transaction_id??"—")+'</td><td>'+statusPill(c.case_status)+'</td><td>'+dateText(c.created_at)+'</td></tr>').join(""):'<tr><td class="empty" colspan="6">No cases found for this account.</td></tr>';
+  $("caseRows").innerHTML=cases.length?cases.map(c=>'<tr><td>'+esc(c.ticket_id||c.case_id||"—")+'</td><td class="wrap">'+esc(c.case_subject||"—")+'</td><td class="wrap">'+esc(c.case_description||"—")+'</td><td>'+esc(c.transaction_id??"—")+'</td><td>'+statusPill(c.case_status)+'</td><td>'+dateText(c.created_at)+'</td><td><button class="secondary small" data-edit-case="'+esc(c.case_id)+'">Edit</button></td></tr>').join(""):'<tr><td class="empty" colspan="7">No cases found for this account.</td></tr>';
   $("transactionRows").innerHTML=transactions.length?transactions.map(t=>'<tr><td>'+esc(t.transaction_id)+'</td><td>'+esc(t.transaction_amount??"—")+'</td><td>'+dateText(t.transaction_datetime)+'</td><td>'+esc(t.transaction_type||"—")+'</td><td>'+statusPill(t.transaction_status)+'</td><td class="wrap">'+esc(t.failure_reason||"—")+'</td></tr>').join(""):'<tr><td class="empty" colspan="6">No transactions found for this account.</td></tr>';
  }catch(e){showError(e.message||String(e));}
 }
+$("caseRows").addEventListener("click",e=>{const b=e.target.closest("[data-edit-case]");if(!b)return;const c=accountCases.find(x=>String(x.case_id)===b.dataset.editCase);if(!c)return;editingCase=c.case_id;$("editTicket").value=c.ticket_id||c.case_id||"";$("editStatus").value=c.case_status||"Open";$("editSubject").value=c.case_subject||"";$("editTransaction").value=c.transaction_id??"";$("editDescription").value=c.case_description||"";$("editPriority").value=c.case_priority||"Medium";$("editInteractions").value="";$("editTitle").textContent="Edit Ticket "+(c.ticket_id||c.case_id);$("caseEditPanel").classList.add("show");$("caseEditPanel").scrollIntoView({behavior:"smooth",block:"start"});});
+$("cancelCaseEdit").onclick=()=>{$("caseEditPanel").classList.remove("show");editingCase=null;$("caseEditForm").reset();};
+$("caseEditForm").onsubmit=async e=>{e.preventDefault();if(editingCase===null)return;const ids=$("editInteractions").value.split(/[ ,\n\r]+/).map(x=>x.trim()).filter(Boolean);const payload={action:"update",case_id:Number(editingCase),case_subject:$("editSubject").value.trim(),case_description:$("editDescription").value.trim()||null,account_number:Number(accountNumber),transaction_id:$("editTransaction").value?Number($("editTransaction").value):null,case_status:$("editStatus").value,case_priority:$("editPriority").value,interaction_ids:ids};$("saveCase").disabled=true;$("saveCase").textContent="Saving…";try{await post(CASE_API,payload);$("caseEditPanel").classList.remove("show");editingCase=null;$("caseEditForm").reset();$("notice").textContent="Case updated successfully.";$("notice").className="notice show ok";await load();}catch(err){showError(err.message||String(err));}finally{$("saveCase").disabled=false;$("saveCase").textContent="Save case";}};
 load();
 </script>
 </body>
